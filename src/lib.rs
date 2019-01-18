@@ -74,7 +74,6 @@ const PREFIX: &str = "gen_";
 ///```
 #[proc_macro]
 pub fn glob_expand(item: TokenStream) -> TokenStream {
-    println!("item: \"{}\"", item.to_string());
     let GlobExpand {
         glob_pattern,
         lambda,
@@ -112,6 +111,8 @@ pub fn glob_expand(item: TokenStream) -> TokenStream {
         // form an identifier with prefix
         let mut func_name = PREFIX.to_string();
         func_name.push_str(&canonical_name);
+
+        // quote! requires proc_macro2 elements
         let func_ident = proc_macro2::Ident::new(&func_name,
                                                  proc_macro2::Span::call_site());
 
@@ -127,5 +128,6 @@ pub fn glob_expand(item: TokenStream) -> TokenStream {
         item
     }).fold(empty_ts, concat);
 
+    // transforming proc_macro2::TokenStream into proc_macro::TokenStream
     result.into()
 }

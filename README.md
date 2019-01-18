@@ -103,7 +103,6 @@ As you will notice from code above, the user's test function **must** have the s
 * Everytime the hosting file is re-build, the macro will be evaluated and test-functions are created
 * Note: If using incremental builds, the test functions may be generated on first build only; adding new testsets to the directory, does not trigger a rebuild/generation. You may enforce a rebuild the following way `cargo clean -p <local-pkg> && cargo build`  
 
-```
 ### Test output
 This crate is shipped with an example. Invoking the following cargo command 
 in the folder ./example, the following results are print to console.
