@@ -24,7 +24,7 @@ Add the following line to the project file _Cargo.toml_
 ...
 edition = "2018"
 ...
-[dependencies]
+[dev-dependencies]
 test-generator = "^0.1"
 ```
 
