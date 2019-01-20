@@ -138,13 +138,16 @@ fn expr_stringified(expr: &Expr, int_as_hex: bool) -> String {
         Expr::Array(ref array_expr) => {
             let elems = &array_expr.elems;
             let mut composed = String::new();
+            // do not
             let mut cnt: usize = 0;
             // concat as hex-numbers, group by 8
             for expr in elems.iter() {
-                cnt = (cnt + 1) % 8;
-                if 0 == cnt {
+                // after 8 elements, always insert '_', do not begin with '_'
+                if cnt > 0 && cnt % 8 == 0 {
                     composed.push_str("_");
                 }
+                cnt = cnt + 1;
+
                 let expr_str = expr_stringified(&expr, true);
                 composed.push_str(&expr_str);
             }
