@@ -18,16 +18,10 @@ const CONTENT_MAX_LEN: usize = 100;
 // Remove from string punctuation/delimiters and special characters
 fn canonical_fn_name(s: &str) -> String {
     // remove delimiters and special characters
-    s.replace("\"", " ")
-        .replace(" ", "_")
-        .replace(".", "_")
-        .replace(":", "_")
-        .replace("-", "_")
-        .replace("*", "_")
-        .replace("/", "_")
-        .replace("\n", "_")
-        .replace("\t", "_")
-        .replace("\r", "_")
+    s.replace(
+        &['"', ' ', '.', ':', '-', '*', '/', '\\', '\n', '\t', '\r'][..],
+        "_",
+    )
 }
 
 /// Concatenate two token-streams
