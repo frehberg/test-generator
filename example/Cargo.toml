@@ -1,8 +1,8 @@
 [package]
 name = "test-generator-example"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Frank Rehberger <frehberg@gmail.com>"]
 edition = "2018"
 
 [dev-dependencies]
-test-generator = {  path = "..", version = "^0.1" }
+test-generator = {  path = "..", version = "^0.2" }

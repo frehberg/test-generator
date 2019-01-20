@@ -1,6 +1,6 @@
 [package]
 name = "test-generator"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Frank Rehberger <frehberg@gmail.com>"]
 edition = "2018"
 description = "Rust Test generator: enumerating entries according to file-system pattern and generating a test function for each entry."
@@ -17,5 +17,5 @@ proc-macro = true
 [dependencies]
 glob = "^0.2"
 quote = "0.6"
-syn = "0.15.26"
+syn = { version="0.15.26", features=["full"] }
 proc-macro2 = "0.4.25"
