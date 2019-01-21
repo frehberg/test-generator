@@ -3,6 +3,10 @@ name = "test-generator-example"
 version = "0.2.1"
 authors = ["Frank Rehberger <frehberg@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
 [dev-dependencies]
 test-generator = {  path = "..", version = "^0.2" }
+
+[build-dependencies]
+build-deps = {  path = "../build-deps", version = "^0.1" }

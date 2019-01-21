@@ -1,0 +1,17 @@
+[package]
+name = "build-deps"
+version = "0.1.0"
+authors = ["Frank Rehberger <frehberg@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+keywords = ["test", "generate", "proc_macro", "derive", "dependencies"]
+description = "Rust build-script dependencies generator for data/IDL files"
+license = "Apache-2.0"
+
+documentation = "https://docs.rs/build-deps"
+homepage = "https://github.com/frehberg/test-generator.git"
+repository = "https://github.com/frehberg/test-generator.git"
+
+[dependencies]
+glob = "^0.2"
+build-helper = "0.1.1"
