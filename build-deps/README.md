@@ -35,7 +35,7 @@ extern crate build_deps;
 fn main() {
    // Enumerate files in sub-folder "data/*", being relevant for the test-generation (as example)
     // If function returns with error, exit with error message.
-    build_deps::rerun_if_changed_foreach( "data/*" ).unwrap();
+    build_deps::rerun_if_changed_paths( "data/*" ).unwrap();
 }
 ```
 
