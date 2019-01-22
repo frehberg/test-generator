@@ -42,9 +42,18 @@ pub enum Error {
 /// Exapanding the GLOB pattern and adding dependency to Cargo-build-process
 ///
 /// For example:
+/// `"data/*"`  will enumerate all files/directories in directory "data/" and watchin changes
 ///
-/// * "data/*" - will enumerate all files/directories in directory "data/" and watchin changes
-/// * "data/" - will add the directory itself to the watch-list, triggering a rerun in case new entities are added.
+/// `"data/"` - will add the directory itself to the watch-list, triggering a rerun in case new entities are added.
+///
+/// `"data/**/*.protobuf"` will traverse all sub-directories enumerating all protobuf files.
+///
+/// `"data/**"` will traverse all sub-directories enumerating all directories
+///
+/// **Rule of thumb**
+/// Add files, if changes to files shall be detected.
+///
+/// Add directories, if the build-process shall be rerun in case of _new_ files.
 ///
 /// ```
 /// // declared in Cargo.toml as "[build-dependencies]"
@@ -61,8 +70,7 @@ pub enum Error {
 /// ```
 ///
 pub fn rerun_if_changed_paths(pattern: &str) -> Result<(), Error> {
-    let paths: Paths = glob(&pattern)
-        .map_err(|err| Error::InvalidGlobPattern(err.to_string()))?;
+    let paths: Paths = glob(&pattern).map_err(|err| Error::InvalidGlobPattern(err.to_string()))?;
 
     for entry in paths {
         match entry {
