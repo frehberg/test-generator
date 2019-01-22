@@ -41,12 +41,10 @@ pub enum Error {
 
 /// Exapanding the GLOB pattern and adding dependency to Cargo-build-process
 ///
-/// The pattern must expand to empty list, or containing only files.
-/// Cargo does not watch changes in directories. If the pattern-expansion contains a directory,
-/// the function will return with error. The code in build.rs may continue or interrup the build
-/// process in this case.
+/// For example:
 ///
-/// Example:
+/// * "data/*" - will enumerate all files/directories in directory "data/" and watchin changes
+/// * "data/" - will add the directory itself to the watch-list, triggering a rerun in case new entities are added.
 ///
 /// ```
 /// // declared in Cargo.toml as "[build-dependencies]"
@@ -56,6 +54,9 @@ pub enum Error {
 ///    // Enumerate files in sub-folder "data/*", being relevant for the test-generation (as example)
 ///    // If function returns with error, exit with error message.
 ///    build_deps::rerun_if_changed_paths( "data/*" ).unwrap();
+///
+///    // Adding the parent directory "data" to the watch-list will capture new-files being added
+///    build_deps::rerun_if_changed_paths( "data" ).unwrap();
 /// }
 /// ```
 ///
@@ -63,25 +64,12 @@ pub fn rerun_if_changed_paths(pattern: &str) -> Result<(), Error> {
     let paths: Paths = glob(&pattern)
         .map_err(|err| Error::InvalidGlobPattern(err.to_string()))?;
 
-    let mut rv = Ok(());
-
-    for path in paths {
-        let pathbuf = path
-            .map_err(|err| Error::InvalidGlobPattern(err.to_string()))?;
-
-        let std_path = std::path::Path::new(&pathbuf);
-        if std_path.is_dir() || !std_path.is_file() {
-            let path_as_str = pathbuf
-                .into_os_string()
-                .into_string()
-                .map_err(|err| Error::InvalidOsString(err.to_owned()))?;
-
-            // set error, but continue with next item, in case the build-script is ignoring errors
-            rv = Err(Error::ExpandedPathExpectedFile(path_as_str.to_string()));
-        } else {
-            build_helper::rerun_if_changed(&pathbuf);
+    for entry in paths {
+        match entry {
+            Ok(path) => build_helper::rerun_if_changed(&path),
+            Err(e) => return Err(Error::InvalidGlobPattern(e.to_string())),
         }
     }
 
-    rv
+    Ok(())
 }
