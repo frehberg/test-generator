@@ -17,6 +17,13 @@ the output. The compilation of the crate is re-run if specified files have chang
 
 `"data/**"` will traverse all sub-directories enumerating all directories
 
+![](https://get-diagram.herokuapp.com/sequence?
+  Andrew->China: Says Hello;
+  Note right of China: China thinks about it;
+  China-->Andrew: How are you?;
+  Andrew->>China: I am good thanks!;
+)
+
 ##### Rule of thumb
 
 Add files, if changes to files shall be detected.
@@ -59,6 +66,13 @@ fn main() {
     build_deps::rerun_if_changed_paths( "data" ).unwrap();
 }
 ```
+
+### Integration into Build-Process
+
+The following diagram illustrates the integration of the build-script into the conditional cargo build-process.
+
+![Build Script Intregration](docs/build-script-sequence.png)
+
 
 [licence-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
 [licence-url]: LICENSE.md

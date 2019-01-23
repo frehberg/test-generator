@@ -455,10 +455,10 @@ impl Parse for ExpandList {
 ///
 ///   fn test_size(value: &usize) { assert!( *value > 0 ); }
 ///
-///   const VEC1 = [ 1, 2, 3, 4 ]; /* speaking array names */
-///   const VEC2 = [ 5, 6, 7, 8 ];
+///   const VEC1: &[u8] = &[ 1, 2, 3, 4 ]; /* speaking array names */
+///   const VEC2: &[u8] = &[ 5, 6, 7, 8 ];
 ///   test_generator::test_expand_list! { test_array_size; [ &VEC1, &VEC2 ]}
-///   test_generator::test_expand_list! { test_array_size; [ [1, 2, 3, 4], [ 5, 6, 7, 8 ]}
+///   test_generator::test_expand_list! { test_array_size; [ [1, 2, 3, 4], [ 5, 6, 7, 8 ] ] }
 ///
 ///   fn test_array_size<T>(ar: &[T]) {
 ///        assert!(ar.len() > 0);
@@ -483,6 +483,10 @@ impl Parse for ExpandList {
 ///    #[test]
 ///    fn test_array_size_01020304() { test_array_size( &[ 1, 2, 3, 4 ] ); }
 ///    fn test_array_size_05060708() { test_array_size( &[ 5, 6, 7, 8 ] ); }
+///
+///    fn test_array_size<T>(ar: &[T]) {
+///        assert!(ar.len() > 0);
+///    }
 ///}
 ///```
 #[proc_macro]
