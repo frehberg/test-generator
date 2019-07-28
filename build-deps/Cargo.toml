@@ -1,6 +1,6 @@
 [package]
 name = "build-deps"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Frank Rehberger <frehberg@gmail.com>"]
 edition = "2018"
 readme = "README.md"
@@ -9,9 +9,8 @@ description = "Rust build-script dependencies generator for data/IDL files"
 license = "Apache-2.0"
 
 documentation = "https://docs.rs/build-deps"
-homepage = "https://github.com/frehberg/test-generator.git"
-repository = "https://github.com/frehberg/test-generator.git"
+homepage = "https://github.com/frehberg/test-generator/tree/master/build-deps"
+repository = "https://github.com/frehberg/test-generator/tree/master/build-deps"
 
 [dependencies]
-glob = "^0.2"
-build-helper = "^0.1"
+glob = "^0.3"

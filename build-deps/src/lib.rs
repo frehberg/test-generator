@@ -1,7 +1,6 @@
 // Copyright (C) 2019  Frank Rehberger
 //
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0>
+// Licensed under the Apache License, Version 2.0 or MIT License
 
 //! # Rust build-script dependencies generator
 //!
@@ -20,9 +19,8 @@
 //!
 //! Note: The cargo application ist storing the build-script-output in the build directory,
 //!       for example: `target/debug/build/*/output`.
-
-extern crate build_helper;
 extern crate glob;
+use std::path::{Path};
 
 use self::glob::{glob, Paths};
 
@@ -39,6 +37,13 @@ pub enum Error {
     ExpandedPathExpectedFile(String),
 }
 
+/// Specify a file or directory which, if changed, should trigger a rebuild.
+///
+/// Reference: This function stems from crate 'build-helper'
+fn rerun_if_changed<P: AsRef<Path>>(path: P) {
+    println!("cargo:rerun-if-changed={}", path.as_ref().display());
+}
+
 /// Exapanding the GLOB pattern and adding dependency to Cargo-build-process
 ///
 /// For example:
@@ -53,7 +58,7 @@ pub enum Error {
 /// **Rule of thumb**
 /// Add files, if changes to files shall be detected.
 ///
-/// Add directories, if the build-process shall be rerun in case of _new_ files.
+/// Add directories, if the build-process shall be rerun in case of _new_/_removed_ files.
 ///
 /// ```
 /// // declared in Cargo.toml as "[build-dependencies]"
@@ -74,7 +79,7 @@ pub fn rerun_if_changed_paths(pattern: &str) -> Result<(), Error> {
 
     for entry in paths {
         match entry {
-            Ok(path) => build_helper::rerun_if_changed(&path),
+            Ok(path) => rerun_if_changed(&path),
             Err(e) => return Err(Error::InvalidGlobPattern(e.to_string())),
         }
     }

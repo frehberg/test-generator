@@ -15,14 +15,7 @@ the output. The compilation of the crate is re-run if specified files have chang
 
 `"data/**/*.protobuf"` will traverse all sub-directories enumerating all protobuf files.
 
-`"data/**"` will traverse all sub-directories enumerating all directories
-
-![](https://get-diagram.herokuapp.com/sequence?
-  Andrew->China: Says Hello;
-  Note right of China: China thinks about it;
-  China-->Andrew: How are you?;
-  Andrew->>China: I am good thanks!;
-)
+`"data/**"` will traverse all sub-directories enumerating all directories.
 
 ##### Rule of thumb
 
@@ -38,6 +31,8 @@ directory "data/*" have been modified or new files have been added to that direc
 The build-process will execute proc_macros reading those files and generating Rust-code.
 
 A complete example/setup can be found at github [test-generator/example](https://github.com/frehberg/test-generator/tree/master/example)
+
+For further tooling around the build-scripts, please take a look at the crate [build-helper](https://crates.io/crates/build-helper)
 
 #### Cargo.toml
 
@@ -58,7 +53,7 @@ build-deps = "^0.1"
 extern crate build_deps;
 
 fn main() {
-    // Enumerate files in sub-folder "data/*", being relevant for the test-generation (as example)
+    // Enumerate files in sub-folder "data/*", being relevant for the code-generation (for example)
     // If function returns with error, exit with error message.
     build_deps::rerun_if_changed_paths( "data/*" ).unwrap();
 
@@ -67,11 +62,11 @@ fn main() {
 }
 ```
 
-### Integration into Build-Process
+### Integration into Conditional Build-Process
 
 The following diagram illustrates the integration of the build-script into the conditional cargo build-process.
 
-![Build Script Intregration](docs/build-script-sequence.png)
+![ <Diagram - Build Script Intregration> ](docs/build-script-sequence.png)
 
 
 [licence-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
