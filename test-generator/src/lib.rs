@@ -1,7 +1,116 @@
-// Copyright (C) 2019  Frank Rehberger
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0>
+//! # Overview
+//! This crate provides `#[test_resources]` and `#[bench_resources]` procedural macro attributes
+//! that generates multiple parametrized tests using one body with different resource input parameters.
+//! A test is generated for each resource matching the specific resource location pattern.
+//!
+//! [![Crates.io](https://img.shields.io/crates/v/test-generator.svg)](https://crates.io/crates/test-generator)
+//! [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/frehberg/test-generator/blob/master/LICENSE-MIT)
+//! [![Apache License](http://img.shields.io/badge/license-Apache-blue.svg)](https://github.com/frehberg/test-generator/blob/master/LICENSE-APACHE)
+//! [![Example](http://img.shields.io/badge/crate-Example-red.svg)](https://github.com/frehberg/test-generator/tree/master/example)
+//!
+//! [Documentation](https://docs.rs/test-generator/)
+//!
+//! [Repository](https://github.com/frehberg/test-generator/)
+//!
+//! # Getting Started
+//!
+//! First of all you have to add this dependency to your `Cargo.toml`:
+//!
+//! ```toml
+//! [dev-dependencies]
+//! test-generator = "0.3.0"
+//! ```
+//!
+//! With Rust older than 1.30, you have to enable `proc_macro` feature and include crate. You can do this globally by adding:
+//! ```ignore
+//! #![feature(proc_macro)]
+//! extern crate test_generator;
+//! ```
+//!
+//! Don't forget that procedural macros are imported with `use` statement:
+//!
+//! ```ignore
+//! use test_generator::test_resources;
+//! ```
+//!
+//! # Example usage `test`:
+//!
+//! ```ignore
+//! #![cfg(test)]
+//! extern crate test_generator;
+//!
+//! use test_generator::test_resources;
+//!
+//! #[test_resources("res/*/input.txt")]
+//! fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
+//! ```
+//!
+//! Output from `cargo test` for 3 test-input-files matching the pattern, for this example:
+//!
+//! ```console
+//! $ cargo test
+//!
+//! running 3 tests
+//! test tests::verify_resource_res_set1_input_txt ... ok
+//! test tests::verify_resource_res_set2_input_txt ... ok
+//! test tests::verify_resource_res_set3_input_txt ... ok
+//!
+//! test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+//! ```
+//! # Example usage `bench`:
+//!
+//! ```ignore
+//! #![feature(test)] // nightly feature required for API test::Bencher
+//!
+//! #[macro_use]
+//! extern crate test_generator;
+//!
+//! extern crate test; /* required for test::Bencher */
+//!
+//! mod bench {
+//!     #[bench_resources("res/*/input.txt")]
+//!     fn measure_resource(b: &mut test::Bencher, resource: &str) {
+//!         let path = std::path::Path::new(resource);
+//!         b.iter(|| path.exists());
+//!     }
+//! }
+//! ```
+//! Output from `cargo +nightly bench` for 3 bench-input-files matching the pattern, for this example:
+//!
+//! ```console
+//! running 3 tests
+//! test bench::measure_resource_res_set1_input_txt ... bench:       2,492 ns/iter (+/- 4,027)
+//! test bench::measure_resource_res_set2_input_txt ... bench:       2,345 ns/iter (+/- 2,167)
+//! test bench::measure_resource_res_set3_input_txt ... bench:       2,269 ns/iter (+/- 1,527)
+//!
+//! test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out
+//! ```
+//!
+//! # Example
+//! The [example](https://github.com/frehberg/test-generator/tree/master/example) demonstrates usage
+//! and configuration of these macros, in combination with the crate
+//! `build-deps` monitoring for any change of these resource files and conditional rebuild.
+//!
+//! # Internals
+//! Let's assume the following code and 3 files matching the pattern "res/*/input.txt"
+//! ```ignore
+//! #[test_resources("res/*/input.txt")]
+//! fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
+//! ```
+//! the generated code for this input resource will look like
+//! ```
+//! #[test]
+//! #[allow(non_snake_case)]
+//! fn verify_resource_res_set1_input_txt() { verify_resource("res/set1/input.txt".into()); }
+//! #[test]
+//! #[allow(non_snake_case)]
+//! fn verify_resource_res_set2_input_txt() { verify_resource("res/set2/input.txt".into()); }
+//! #[test]
+//! #[allow(non_snake_case)]
+//! fn verify_resource_res_set3_input_txt() { verify_resource("res/set3/input.txt".into()); }
+//! ```
+//! Note: The trailing `into()` method-call permits users to implement the `Into`-Trait for auto-conversations.
+//!
 extern crate glob;
 extern crate proc_macro;
 
@@ -11,11 +120,9 @@ use self::glob::{glob, Paths};
 use quote::quote;
 use std::path::PathBuf;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{parse_macro_input, Expr, ExprLit, Ident, Lit, Token};
+use syn::{parse_macro_input, Expr, ExprLit, Ident, Lit, Token, ItemFn};
 
-const CONTENT_MAX_LEN: usize = 100;
-
-// Remove from string punctuation/delimiters and special characters
+// Form canonical name without any punctuation/delimiter or special character
 fn canonical_fn_name(s: &str) -> String {
     // remove delimiters and special characters
     s.replace(
@@ -24,13 +131,205 @@ fn canonical_fn_name(s: &str) -> String {
     )
 }
 
-/// Concatenate two token-streams
+/// Return the concatenation of two token-streams
+fn concat_ts_cnt(
+    accu: (u64, proc_macro2::TokenStream),
+    other: proc_macro2::TokenStream,
+) -> (u64, proc_macro2::TokenStream) {
+    let (accu_cnt, accu_ts) = accu;
+    (accu_cnt + 1, quote! { #accu_ts #other })
+}
+
+/// MacroAttributes elements
+struct MacroAttributes {
+    glob_pattern: Lit,
+}
+
+/// MacroAttributes parser
+impl Parse for MacroAttributes {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let glob_pattern: Lit = input.parse()?;
+        if ! input.is_empty() {
+            panic!("found multiple parameters, expected one");
+        }
+
+        Ok(MacroAttributes {
+            glob_pattern,
+        })
+    }
+}
+
+/// Macro generating test-functions, invoking the fn for each item matching the resource-pattern.
+///
+/// The resource-pattern must not expand to empty list, otherwise an error is raised.
+/// The generated test-functions is aregular tests, being compiled by the rust-compiler; and being
+/// executed in parallel by the test-framework.
+/// ```
+/// #[cfg(test)]
+/// mod tests {
+///   extern crate test_generator;
+///
+///   #[test_resources("res/*/input.txt")]
+///   fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
+/// }
+/// ```
+///
+///
+#[proc_macro_attribute]
+pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
+    let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
+
+    let pattern = match glob_pattern {
+        Lit::Str(l) => l.value(),
+        Lit::Bool(l) => panic!(format!("expected string parameter, got '{}'", &l.value)),
+        Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::ByteStr(_) => panic!("expected string parameter, got byte-string"),
+        Lit::Char(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        _ => panic!("expected string parameter"),
+    };
+
+    let func_copy: proc_macro2::TokenStream = func.clone().into();
+
+    let func_ast: ItemFn = syn::parse(func)
+        .expect("failed to parse tokens as a function");
+
+    let func_ident = func_ast.ident;
+
+    let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
+
+    // for each path generate a test-function and fold them to single tokenstream
+    let result = paths
+        .map(|path| {
+            let path_as_str = path
+                .expect("No such file or directory")
+                .into_os_string()
+                .into_string()
+                .expect("bad encoding");
+            let test_name = format!("{}_{}", func_ident.to_string(), &path_as_str);
+
+            // create function name without any delimiter or special character
+            let test_name = canonical_fn_name(&test_name);
+
+            // quote! requires proc_macro2 elements
+            let test_ident = proc_macro2::Ident::new(&test_name, proc_macro2::Span::call_site());
+
+            let item = quote! {
+                #[test]
+                #[allow(non_snake_case)]
+                fn # test_ident () {
+                    # func_ident ( #path_as_str .into() );
+                }
+            };
+
+            item
+        })
+        .fold((0, func_copy), concat_ts_cnt);
+
+    // panic, the pattern did not match any file or folder
+    if result.0 == 0 {
+        let msg: String = format!("no resource matching the pattern {}", &pattern);
+        panic!(msg);
+    }
+    // transforming proc_macro2::TokenStream into proc_macro::TokenStream
+    result.1.into()
+}
+
+/// Macro generating bench-functions, invoking the fn for each item matching the resource-pattern.
+///
+/// The resource-pattern must not expand to empty list, otherwise an error is raised.
+/// The generated test-functions is a regular bench, being compiled by the rust-compiler; and being
+/// executed in sequentially by the bench-framework.
+/// ```ignore
+/// #![feature(test)] // nightly feature required for API test::Bencher
+/// #[cfg(test)]
+/// mod tests {
+///   extern crate test_generator;
+///
+///   #[bench_resources("res/*/input.txt")]
+///   fn measure_resource(b: &mut test::Bencher, resource: &str) {
+///      let path = std::path::Path::new(resource);
+///      b.iter(|| path.exists());
+///   }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
+    let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
+
+    let pattern = match glob_pattern {
+        Lit::Str(l) => l.value(),
+        Lit::Bool(l) => panic!(format!("expected string parameter, got '{}'", &l.value)),
+        Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::ByteStr(_) => panic!("expected string parameter, got byte-string"),
+        Lit::Char(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        _ => panic!("expected string parameter"),
+    };
+
+    let func_copy: proc_macro2::TokenStream = func.clone().into();
+
+    let func_ast: ItemFn = syn::parse(func)
+        .expect("failed to parse tokens as a function");
+
+    let func_ident = func_ast.ident;
+
+    let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
+
+    // for each path generate a test-function and fold them to single tokenstream
+    let result = paths
+        .map(|path| {
+            let path_as_str = path
+                .expect("No such file or directory")
+                .into_os_string()
+                .into_string()
+                .expect("bad encoding");
+            let test_name = format!("{}_{}", func_ident.to_string(), &path_as_str);
+
+            // create function name without any delimiter or special character
+            let test_name = canonical_fn_name(&test_name);
+
+            // quote! requires proc_macro2 elements
+            let test_ident = proc_macro2::Ident::new(&test_name, proc_macro2::Span::call_site());
+
+            let item = quote! {
+                #[bench]
+                #[allow(non_snake_case)]
+                fn # test_ident (b: &mut test::Bencher) {
+                    # func_ident ( b, #path_as_str .into() );
+                }
+            };
+
+            item
+        })
+        .fold((0, func_copy), concat_ts_cnt);
+
+    // panic, the pattern did not match any file or folder
+    if result.0 == 0 {
+        let msg: String = format!("no resource matching the pattern {}", &pattern);
+        panic!(msg);
+    }
+
+    // transforming proc_macro2::TokenStream into proc_macro::TokenStream
+    result.1.into()
+}
+
+//
+// ------------------ deprecated features ------------------
+//
+
+const CONTENT_MAX_LEN: usize = 100;
+
+/// Return the concatenation of two token-streams
 fn concat_ts(
     accu: proc_macro2::TokenStream,
     other: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     quote! { #accu #other }
 }
+
 
 /// Parser elements
 struct GlobExpand {
@@ -178,35 +477,37 @@ fn fn_ident_from_expr(fn_ident: &Ident, expr: &Expr) -> Ident {
     fn_ident_from_string(fn_ident, &format!("{}", &stringified))
 }
 
-/// Function-Attribute macro expanding glob-file-pattern to a list of directories
+/// **deprecated** Function-Attribute macro expanding glob-file-pattern to a list of directories
 /// and generating a test-function for each one.
 ///
 /// ```
 /// #[cfg(test)]
 /// mod tests {
 ///   extern crate test_generator;
-///   test_generator::glob_expand! { "data/*"; test_exists }
+///   test_generator::glob_expand! { "res/*"; test_exists }
 ///
 ///   fn test_exists(filename: &str) { assert!(std::path::Path::new(filename).exists()); }
 /// }
 /// ```
-/// The macro will expand the code for each subfolder in `"data/*"`, generating the following
+/// The macro will expand the code for each subfolder in `"res/*"`, generating the following
 /// code. This code is not visible in IDE. Every build-time, the code will be newly generated.
 ///
 ///```
-///mod tests {
+/// #[cfg(test)]
+/// mod tests {
 ///    #[test]
-///    fn gen_data_set1() {
-///        test_exists("data/testset1");
+///    fn gen_res_set1() {
+///        test_exists("res/testset1");
 ///    }
 ///
 ///    #[test]
-///    fn gen_data_set2() {
-///        test_exists("data/testset2");
+///    fn gen_res_set2() {
+///        test_exists("res/testset2");
 ///    }
-///}
+/// }
 ///
 ///```
+
 #[proc_macro]
 pub fn glob_expand(item: TokenStream) -> TokenStream {
     let GlobExpand {
@@ -292,29 +593,29 @@ impl Parse for ExpandPaths {
     }
 }
 
-/// Generate a test-function call for each file matching the pattern
+/// **deprecated** Generate a test-function call for each file matching the pattern
 /// ```
 /// extern crate test_generator;
 /// #[cfg(test)]
 /// mod tests {
-///   test_generator::test_expand_paths! { test_exists; "data/*" }
+///   test_generator::test_expand_paths! { test_exists; "res/*" }
 ///
 ///   fn test_exists(dir_name: &str) { assert!(std::path::Path::new(dir_name).exists()); }
 /// }
 /// ```
-/// Assuming  `"data/*"` expands to "data/set1", and "data/set2" the macro will expand to
+/// Assuming  `"res/*"` expands to "res/set1", and "res/set2" the macro will expand to
 ///```
-///mod tests {
+/// mod tests {
 ///    #[test]
-///    fn test_exists_data_set1() {
-///        test_exists("data/set1");
+///    fn test_exists_res_set1() {
+///        test_exists("res/set1");
 ///    }
 ///
 ///    #[test]
-///    fn test_exists_data_set2() {
-///        test_exists("data/set2");
+///    fn test_exists_res_set2() {
+///        test_exists("res/set2");
 ///    }
-///}
+/// }
 ///```
 #[proc_macro]
 pub fn test_expand_paths(item: TokenStream) -> TokenStream {
@@ -359,12 +660,12 @@ pub fn test_expand_paths(item: TokenStream) -> TokenStream {
     result.into()
 }
 
-/// Generate a benchmark-function call for each file matching the pattern
+/// **deprecated** Generate a benchmark-function call for each file matching the pattern
 /// ```
 /// extern crate test_generator;
 /// #[cfg(test)]
 /// mod tests {
-///   test_generator::bench_expand_paths! { bench_exists; "data/*" }
+///   test_generator::bench_expand_paths! { bench_exists; "res/*" }
 ///
 ///   fn bench_exists(bencher: &mut test::Bencher, filename: &str) {
 ///        let path = std::path::Path::new(filename);
@@ -372,19 +673,20 @@ pub fn test_expand_paths(item: TokenStream) -> TokenStream {
 ///    }
 /// }
 /// ```
-/// Assuming  `"data/*"` expands to "data/set1", and "data/set2" the macro will expand to
-///```
-///mod tests {
+/// Assuming  `"res/*"` expands to "res/set1", and "res/set2" the macro will expand to
+///```ignore
+/// #[cfg(test)]
+/// mod tests {
 ///    #[bench]
-///    fn bench_exists_data_set1(bencher: & mut test::Bencher) {
-///        bench_exists(bencher, "data/set1");
+///    fn bench_exists_res_set1(bencher: & mut test::Bencher) {
+///        bench_exists(bencher, "res/set1");
 ///    }
 ///
 ///    #[bench]
-///    fn bench_exists_data_set2(bencher: & mut test::Bencher) {
-///        bench_exists(bencher, "data/set2");
+///    fn bench_exists_res_set2(bencher: & mut test::Bencher) {
+///        bench_exists(bencher, "res/set2");
 ///    }
-///}
+/// }
 ///```
 #[proc_macro]
 pub fn bench_expand_paths(item: TokenStream) -> TokenStream {
@@ -446,7 +748,7 @@ impl Parse for ExpandList {
     }
 }
 
-/// Generate a test-function call for each list-element
+/// **deprecated** Generate a test-function call for each list-element
 /// ```
 /// extern crate test_generator;
 /// #[cfg(test)]
@@ -467,7 +769,8 @@ impl Parse for ExpandList {
 /// ```
 /// Will expand to test-functions incorporating the array-elements
 ///```
-///mod tests {
+/// #[cfg(test)]
+/// mod tests {
 ///    #[test]
 ///    fn test_size_0000000010() { test_size(&10); }
 ///    #[test]
@@ -487,7 +790,7 @@ impl Parse for ExpandList {
 ///    fn test_array_size<T>(ar: &[T]) {
 ///        assert!(ar.len() > 0);
 ///    }
-///}
+/// }
 ///```
 #[proc_macro]
 pub fn test_expand_list(item: TokenStream) -> TokenStream {
@@ -526,7 +829,7 @@ pub fn test_expand_list(item: TokenStream) -> TokenStream {
     item.into()
 }
 
-/// Generate a benchmark-function call for each list-element
+/// **deprecated** Generate a benchmark-function call for each list-element
 /// ```
 /// extern crate test_generator;
 /// #[cfg(test)]
@@ -541,6 +844,7 @@ pub fn test_expand_list(item: TokenStream) -> TokenStream {
 /// ```
 /// Will expand to bench-functions incorporating the array-elements
 ///```
+///#[cfg(test)]
 ///mod tests {
 ///    #[bench]
 ///    fn bench_size_0000000010(bencher: & mut test::Bencher) {

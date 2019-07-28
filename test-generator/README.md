@@ -121,7 +121,7 @@ cargo process shall for changes. In case of changes, the build-process of the Ru
 
 The following diagram illustrates the integration of the build-script into the conditional cargo build-process.
 
-![ <Diagram - Build Script Intregration> ](example/docs/build-script-sequence.png)
+![ <Diagram - Build Script Intregration> ](docs/build-script-sequence.png)
 
 
 ## GLOB Filter Pattern Examples

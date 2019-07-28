@@ -47,13 +47,13 @@ fn rerun_if_changed<P: AsRef<Path>>(path: P) {
 /// Exapanding the GLOB pattern and adding dependency to Cargo-build-process
 ///
 /// For example:
-/// `"data/*"`  will enumerate all files/directories in directory "data/" and watchin changes
+/// `"res/*"`  will enumerate all files/directories in directory "res/" and watchin changes
 ///
-/// `"data/"` - will add the directory itself to the watch-list, triggering a rerun in case new entities are added.
+/// `"res/"` - will add the directory itself to the watch-list, triggering a rerun in case new entities are added.
 ///
-/// `"data/**/*.protobuf"` will traverse all sub-directories enumerating all protobuf files.
+/// `"res/**/*.protobuf"` will traverse all sub-directories enumerating all protobuf files.
 ///
-/// `"data/**"` will traverse all sub-directories enumerating all directories
+/// `"res/**"` will traverse all sub-directories enumerating all directories
 ///
 /// **Rule of thumb**
 /// Add files, if changes to files shall be detected.
@@ -65,12 +65,12 @@ fn rerun_if_changed<P: AsRef<Path>>(path: P) {
 /// extern crate build_deps;
 ///
 /// fn main() {
-///    // Enumerate files in sub-folder "data/*", being relevant for the test-generation (as example)
+///    // Enumerate files in sub-folder "res/*", being relevant for the test-generation (as example)
 ///    // If function returns with error, exit with error message.
-///    build_deps::rerun_if_changed_paths( "data/*" ).unwrap();
+///    build_deps::rerun_if_changed_paths( "res/*" ).unwrap();
 ///
-///    // Adding the parent directory "data" to the watch-list will capture new-files being added
-///    build_deps::rerun_if_changed_paths( "data" ).unwrap();
+///    // Adding the parent directory "res" to the watch-list will capture new-files being added
+///    build_deps::rerun_if_changed_paths( "res" ).unwrap();
 /// }
 /// ```
 ///

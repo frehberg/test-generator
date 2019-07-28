@@ -1,0 +1,38 @@
+@startuml
+skinparam monochrome true
+participant "user" as A
+participant "cargo build" as B
+participant "build-script" as C
+participant "build-deps" as D
+participant "filesystem" as E
+
+create B
+A -> B: start
+
+activate B
+B -> B: compile build.rs
+
+create C
+B -> C: start
+activate C
+
+create D
+C -> D: rerun-if-changed_paths (filter)
+activate D
+
+D -> E: readDirectories
+D <- E: DirectoryEntities
+D -> D: filter Entities
+B <- D: watch Filtered Entities
+C <-- D:
+deactivate D
+B <-- C:
+deactivate C
+
+B -> B: check Entities'\nTimestamps
+B -> B: re-compile Rust-Files\nif dirty Timestamps
+A <-- B:
+deactivate B
+
+@enduml
+
