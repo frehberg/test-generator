@@ -3,6 +3,7 @@ name = "test-generator-example"
 version = "0.3.0"
 authors = ["Frank Rehberger <frehberg@gmail.com>"]
 edition = "2018"
+license = "MIT/Apache-2.0"
 build = "build.rs"
 
 [dev-dependencies]

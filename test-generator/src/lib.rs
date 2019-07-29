@@ -18,22 +18,24 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! test-generator = "0.3.0"
+//! test-generator = "^0.3"
 //! ```
+//! The test-functionality is supports stable Rust since version 1.30,
+//! whereas the bench-functionality requires an API from unstable nightly release.
 //!
-//! With Rust older than 1.30, you have to enable `proc_macro` feature and include crate. You can do this globally by adding:
 //! ```ignore
-//! #![feature(proc_macro)]
+//! #![cfg(test)]
 //! extern crate test_generator;
-//! ```
 //!
-//! Don't forget that procedural macros are imported with `use` statement:
-//!
-//! ```ignore
+//! // Don't forget that procedural macros are imported with `use` statement,
+//! // for example importing the macro 'test_resources'
+//! #![cfg(test)]
 //! use test_generator::test_resources;
 //! ```
 //!
 //! # Example usage `test`:
+//!
+//! The `test` functionality supports the stable release of Rust-compiler since version 1.30.
 //!
 //! ```ignore
 //! #![cfg(test)]
@@ -42,7 +44,9 @@
 //! use test_generator::test_resources;
 //!
 //! #[test_resources("res/*/input.txt")]
-//! fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
+//! fn verify_resource(resource: &str) {
+//!    assert!(std::path::Path::new(resource).exists());
+//! }
 //! ```
 //!
 //! Output from `cargo test` for 3 test-input-files matching the pattern, for this example:
@@ -58,6 +62,8 @@
 //! test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 //! ```
 //! # Example usage `bench`:
+//!
+//! The `bench` functionality requires the nightly release of the Rust-compiler.
 //!
 //! ```ignore
 //! #![feature(test)] // nightly feature required for API test::Bencher
@@ -166,15 +172,55 @@ impl Parse for MacroAttributes {
 /// executed in parallel by the test-framework.
 /// ```
 /// #[cfg(test)]
+/// extern crate test_generator;
+///
+/// #[cfg(test)]
 /// mod tests {
-///   extern crate test_generator;
+///   use test_generator::test_resources;
 ///
 ///   #[test_resources("res/*/input.txt")]
-///   fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
+///   fn verify_resource(resource: &str) {
+///      assert!(std::path::Path::new(resource).exists());
+///   }
 /// }
 /// ```
+/// Assuming the following package layout with test file `mytests.rs` and resource folder `res/`,
+/// the output below will be printed on console. The functionality of `build.rs` is explained at crate
+/// [build-deps](https://crates.io/crates/build-deps) and demonstrated with
+/// [example](https://github.com/frehberg/test-generator/tree/master/example)
 ///
+/// ```ignore
+/// ├── build.rs
+/// ├── Cargo.toml
+/// ├── res
+/// │   ├── set1
+/// │   │   ├── expect.txt
+/// │   │   └── input.txt
+/// │   ├── set2
+/// │   │   ├── expect.txt
+/// │   │   └── input.txt
+/// │   └── set3
+/// │       ├── expect.txt
+/// │       └── input.txt
+/// ├── src
+/// │   └── main.rs
+/// ├── benches
+/// │   └── mybenches.rs
+/// └── tests
+///     └── mytests.rs
+/// ```
+/// Producing the following test output
 ///
+/// ```ignore
+/// $ cargo test
+///
+/// running 3 tests
+/// test tests::verify_resource_res_set1_input_txt ... ok
+/// test tests::verify_resource_res_set2_input_txt ... ok
+/// test tests::verify_resource_res_set3_input_txt ... ok
+///
+/// test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+/// ```
 #[proc_macro_attribute]
 pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
@@ -243,9 +289,15 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 /// executed in sequentially by the bench-framework.
 /// ```ignore
 /// #![feature(test)] // nightly feature required for API test::Bencher
+///
+/// #[cfg(test)]
+/// extern crate test; /* required for test::Bencher */
+/// #[cfg(test)]
+/// extern crate test_generator;
+///
 /// #[cfg(test)]
 /// mod tests {
-///   extern crate test_generator;
+///   use test_generator::bench_resources;
 ///
 ///   #[bench_resources("res/*/input.txt")]
 ///   fn measure_resource(b: &mut test::Bencher, resource: &str) {
@@ -253,6 +305,41 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 ///      b.iter(|| path.exists());
 ///   }
 /// }
+/// ```
+/// Assuming the following package layout with the bench file `mybenches.rs` and resource folder `res/`,
+/// the output below will be printed on console. The functionality of `build.rs` is explained at crate
+/// [build-deps](https://crates.io/crates/build-deps) and demonstrated with
+/// [example](https://github.com/frehberg/test-generator/tree/master/example)
+///
+/// ```ignore
+/// ├── build.rs
+/// ├── Cargo.toml
+/// ├── res
+/// │   ├── set1
+/// │   │   ├── expect.txt
+/// │   │   └── input.txt
+/// │   ├── set2
+/// │   │   ├── expect.txt
+/// │   │   └── input.txt
+/// │   └── set3
+/// │       ├── expect.txt
+/// │       └── input.txt
+/// ├── src
+/// │   └── main.rs
+/// ├── benches
+/// │   └── mybenches.rs
+/// └── tests
+///     └── mytests.rs
+/// ```
+/// Output from `cargo +nightly bench` for 3 bench-input-files matching the pattern, for this example:
+///
+/// ```ignore
+/// running 3 tests
+/// test bench::measure_resource_res_set1_input_txt ... bench:       2,492 ns/iter (+/- 4,027)
+/// test bench::measure_resource_res_set2_input_txt ... bench:       2,345 ns/iter (+/- 2,167)
+/// test bench::measure_resource_res_set3_input_txt ... bench:       2,269 ns/iter (+/- 1,527)
+///
+/// test result: ok. 0 passed; 0 failed; 0 ignored; 3 measured; 0 filtered out
 /// ```
 #[proc_macro_attribute]
 pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {

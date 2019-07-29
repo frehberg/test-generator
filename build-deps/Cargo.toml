@@ -6,7 +6,7 @@ edition = "2018"
 readme = "README.md"
 keywords = ["test", "generate", "proc_macro", "derive", "dependencies"]
 description = "Rust build-script dependencies generator for data/IDL files"
-license = "Apache-2.0"
+license = "MIT/Apache-2.0"
 
 documentation = "https://docs.rs/build-deps"
 homepage = "https://github.com/frehberg/test-generator/tree/master/build-deps"
