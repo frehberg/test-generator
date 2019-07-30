@@ -69,7 +69,7 @@
 ///     // Teardown - Releasing the resources
 ///     fn teardown(context: Context) {
 ///         let Context { file, name } = context;
-///         // drop file resources
+///         // drop file resources explicitly
 ///         std::mem::drop(file);
 ///         // unwrap may panic
 ///         std::fs::remove_file(name).unwrap();
@@ -81,6 +81,8 @@
 ///         let mut file = ctx.file.try_clone().unwrap();
 ///         // may panic
 ///         file.write_all(b"Hello, world!\n").unwrap();
+///         // !!!! although this assertion will fail, the teardown function will be invoked
+///         assert_eq!(1, 0);
 ///     }
 ///
 ///     // Test - verify feature

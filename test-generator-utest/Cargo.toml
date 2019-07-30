@@ -1,6 +1,6 @@
 [package]
 name = "test-generator-utest"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Frank Rehberger <frehberg@gmail.com>"]
 edition = "2018"
 description = "Rust UTest harness, covering the 3 phases: setup/test/teardown"

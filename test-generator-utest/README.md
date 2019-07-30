@@ -30,44 +30,6 @@ mod testsuite {
 
     use test_generator_utest::utest;
 
-    // Defining a context structure, storing the resources
-    struct Context<'t> { file: File, name: &'t str }
-
-    // Setup - Initializing the resources
-    fn setup<'t>(filename: &str) -> Context {
-        // unwrap may panic
-        Context { file: File::create(filename).unwrap(), name: filename }
-    }
-
-    // Teardown - Releasing the resources
-    fn teardown(context: Context) {
-        let Context { file, name } = context;
-
-        // drop file resources
-        std::mem::drop(file);
-
-        // unwrap may panic
-        std::fs::remove_file(name).unwrap();
-    }
-
-    // Test - verify feature
-    fn test_write_hello_world(ctx: &Context) {
-        // may panic
-        let mut file = ctx.file.try_clone().unwrap();
-
-        // may panic
-        file.write_all(b"Hello, world!\n").unwrap();
-    }
-
-    // Test - verify feature
-    fn test_write_hello_europe(ctx: &Context) {
-        // may panic
-        let mut file = ctx.file.try_clone().unwrap();
-
-        // may panic
-        file.write_all(b"Hello, Europe!\n").unwrap();
-    }
-
     // Defining Utest formed by setup, test and teardown
     utest!(hello_world,
         || setup("/tmp/hello_world.txt"),
@@ -80,6 +42,44 @@ mod testsuite {
         || setup("/tmp/hello_europe.txt"),
         test_write_hello_europe,
         teardown);
+
+    // Defining a context structure, storing the resources
+    struct Context<'t> { file: File, name: &'t str }
+
+    // Setup - Initializing the resources
+    fn setup<'t>(filename: &str) -> Context {
+        // unwrap may panic
+        Context { file: File::create(filename).unwrap(), name: filename }
+    }
+
+    // Teardown - Releasing the resources
+    fn teardown(context: Context) {
+        let Context { file, name } = context;
+        // explicit dropping of file resource (would be done implcitly otherwise)
+        std::mem::drop(file);
+        // unwrap may panic
+        std::fs::remove_file(name).unwrap();
+    }
+
+    // Test - verify feature
+    fn test_write_hello_world(ctx: &Context) {
+        // may panic
+        let mut file = ctx.file.try_clone().unwrap();
+        // may panic
+        file.write_all(b"Hello, world!\n").unwrap();
+        // although this assertion will cause a panic, the teardown function will be invoked 
+        assert_eq!(1, 0);
+    }
+
+    // Test - verify feature
+    fn test_write_hello_europe(ctx: &Context) {
+        // may panic
+        let mut file = ctx.file.try_clone().unwrap();
+        // may panic
+        file.write_all(b"Hello, Europe!\n").unwrap();
+       
+        assert_eq!(1,1);
+    }
 }
 ```
 
