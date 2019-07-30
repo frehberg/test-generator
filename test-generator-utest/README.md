@@ -1,34 +1,23 @@
-// Copyright (C) 2019  Frank Rehberger
-//
-// Licensed under the Apache License, Version 2.0 or MIT License
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/frehberg/test-generator/blob/master/LICENSE-MIT)
+[![Apache 2.0 Licensed](http://img.shields.io/badge/license-Apache-blue.svg)](https://github.com/frehberg/test-generator/blob/master/LICENSE-APACHE)
+# Test generator UTest
 
-#[cfg(test)]
-extern crate test_generator;
+This crates implements a 3-phase utest-harness for Rust. The 3 phases are:
 
-#[cfg(test)]
-mod tests {
-    use test_generator::test_resources;
+* Setup: the setup function must initialize the context; in case the function panics/aborts, the utest is aborted
+```fn() -> Context```
+* Test: if the setup did return with valud context item, this context is used to invoke the test.
+```fn( & Context )```
+* Teardown: no matter if the test-function above did panic/abort, the teardown function is invoked to release the context
+```fn( Context )```
 
-    // For all subfolders matching "res/*/input.txt" do generate a test function
-    // For example:
-    // In case of the following resources in these two folders "rest1/input.txt"
-    // and "res/set2/input.txt" the following test functions
-    // would be created
-    // ```
-    // #[test]
-    // fn verify_resource_res_set1_input_txt() {
-    //     verify_resource("res/set1/input.txt".into());
-    // }
-    //
-    // #[test]
-    // fn verify_resource_res_set2_input_txt() {
-    //     verify_resource("res/set2/input.txt".into());
-    // }
-    // ```
-    #[test_resources("res/*/input.txt")]
-    fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
-}
+This crate has been inspired by the [post of Eric Opines](https://medium.com/@ericdreichert/test-setup-and-teardown-in-rust-without-a-framework-ba32d97aa5ab).
 
+## Usage
+
+Please see the executable [example](https://github.com/frehberg/test-generator/tree/master/example).
+
+```rust
 #[cfg(test)]
 extern crate test_generator_utest;
 
@@ -81,13 +70,28 @@ mod testsuite {
         std::mem::drop(file);
     }
 
+    // Defining Utest formed by setup, test and teardown
     utest!(hello_world,
         || setup("/tmp/hello_world.txt"),
         |ctx_ref| test_write_hello_world(ctx_ref),
         |ctx|teardown(ctx));
 
+
+    // Defining Utest formed by setup, test and teardown
     utest!(hello_europe,
         || setup("/tmp/hello_europe.txt"),
         test_write_hello_europe,
         teardown);
 }
+```
+
+Executing the example code ```cargo test -p test-generator-example testsuite```
+the testsuote above will print the following output.
+ 
+```
+running 2 tests
+test testsuite::hello_europe ... ok
+test testsuite::hello_world ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+```

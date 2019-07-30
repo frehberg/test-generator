@@ -403,6 +403,91 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     result.1.into()
 }
 
+
+/// **Experimental** Helper function encapsulating and unwinding each phase, namely setup, test and teardown
+//fn run_utest<U, T, D, C>(setup: U, test: T, teardown: D) -> ()
+//    where
+//        U: FnOnce() -> C + std::panic::UnwindSafe,
+//        T: FnOnce(&C) -> () + std::panic::UnwindSafe,
+//        D: FnOnce(C) -> () + std::panic::UnwindSafe,
+//        C: std::panic::UnwindSafe + std::panic::RefUnwindSafe
+//{
+//    let context = std::panic::catch_unwind(|| {
+//        setup()
+//    });
+//
+//    assert!(context.is_ok());
+//
+//    // unwrap the internal context item
+//    let ctx = match context {
+//        Ok(ctx) => ctx,
+//        Err(_) => unreachable!(),
+//    };
+//
+//    let result = std::panic::catch_unwind(|| {
+//        test(&ctx)
+//    });
+//
+//    let finalizer = std::panic::catch_unwind(|| {
+//        teardown(ctx)
+//    });
+//
+//    assert!(result.is_ok());
+//
+//    assert!(finalizer.is_ok());
+//}
+
+/// **Experimental** Executing a 3-phase unit-test: setup, test, teardown
+///
+/// ## Usage
+/// ```
+/// extern crate test_generator;
+///
+/// #[cfg(test)]
+/// mod testsuite {
+///    use test_generator::utest;
+///    use std::fs::File;
+///
+///    struct Context { file: File }
+///
+///    fn setup() -> Context {
+///
+///    }
+/// }
+/// ```
+///
+//#[macro_export]
+//macro_rules! v1_utest {
+//    ( $id: ident, $setup:expr, $test:expr, $teardown:expr ) => {
+//       #[test]
+//       fn $id() {
+//            let context = std::panic::catch_unwind(|| {
+//                $setup()
+//            });
+//
+//            assert!(context.is_ok());
+//
+//            // unwrap the internal context item
+//            let ctx = match context {
+//                Ok(ctx) => ctx,
+//                Err(_) => unreachable!(),
+//            };
+//
+//            let result = std::panic::catch_unwind(|| {
+//                $test(&ctx)
+//            });
+//
+//            let finalizer = std::panic::catch_unwind(|| {
+//                $teardown(ctx)
+//            });
+//
+//            assert!(result.is_ok());
+//
+//            assert!(finalizer.is_ok());
+//       }
+//    };
+//}
+
 //
 // ------------------ deprecated features ------------------
 //

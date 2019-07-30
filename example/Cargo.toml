@@ -9,6 +9,7 @@ build = "build.rs"
 [dev-dependencies]
 test-generator =  { version = "^0.3", path = "../test-generator" }
 rustversion = "0.1.3"
+test-generator-utest =  { version = "^0.1", path = "../test-generator-utest" }
 
 [build-dependencies]
 build-deps = { version = "^0.1", path = "../build-deps" }
