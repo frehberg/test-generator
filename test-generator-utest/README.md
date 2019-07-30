@@ -11,11 +11,13 @@ This crates implements a 3-phase utest-harness for Rust. The 3 phases are:
 * Teardown: no matter if the test-function above did panic/abort, the teardown function is invoked to release the context
 ```fn( Context )```
 
+No matter of any panic or failing assertion in the second phase (feature testing), the teardown function is invoked. The test will either succeed, or otherwise unwinding a failure in the setup-phase, the test-phase or the teardown-phase. 
+
 This crate has been inspired by the [post of Eric Opines](https://medium.com/@ericdreichert/test-setup-and-teardown-in-rust-without-a-framework-ba32d97aa5ab).
 
 ## Usage
 
-Please see the executable [example](https://github.com/frehberg/test-generator/tree/master/example).
+Please see the test file 'mytests.rs at the executable [example](https://github.com/frehberg/test-generator/tree/master/example).
 
 ```rust
 #[cfg(test)]
@@ -55,8 +57,6 @@ mod testsuite {
 
         // may panic
         file.write_all(b"Hello, world!\n").unwrap();
-
-        std::mem::drop(file);
     }
 
     // Test - verify feature
@@ -66,8 +66,6 @@ mod testsuite {
 
         // may panic
         file.write_all(b"Hello, Europe!\n").unwrap();
-
-        std::mem::drop(file);
     }
 
     // Defining Utest formed by setup, test and teardown
