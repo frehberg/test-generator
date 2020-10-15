@@ -61,6 +61,15 @@
 //!
 //! test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 //! ```
+//! ## Annotating tests to be ignored
+//! Sometimes tests should not be run by default, for example if they take a very
+//! long time to run. Such tests would usually be annotated with #[ignore].
+//! The `test_resources` macro allows to do this by adding the `ignore` keyword
+//! after the resource:
+//! ```ignore
+//! #[test_resources("res/*/input.txt", ignore)]
+//! ```
+//!
 //! # Example usage `bench`:
 //!
 //! The `bench` functionality requires the nightly release of the Rust-compiler.
@@ -126,7 +135,7 @@ use self::glob::{glob, Paths};
 use quote::quote;
 use std::path::PathBuf;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{parse_macro_input, Expr, ExprLit, Ident, Lit, Token, ItemFn};
+use syn::{parse_macro_input, Expr, ExprLit, Ident, ItemFn, Lit, Token};
 
 // Form canonical name without any punctuation/delimiter or special character
 fn canonical_fn_name(s: &str) -> String {
@@ -146,22 +155,41 @@ fn concat_ts_cnt(
     (accu_cnt + 1, quote! { #accu_ts #other })
 }
 
+mod kw {
+    syn::custom_keyword!(ignore);
+}
+
 /// MacroAttributes elements
 struct MacroAttributes {
     glob_pattern: Lit,
+    ignore: bool,
 }
 
 /// MacroAttributes parser
 impl Parse for MacroAttributes {
     fn parse(input: ParseStream) -> Result<Self> {
-        let glob_pattern: Lit = input.parse()?;
-        if ! input.is_empty() {
-            panic!("found multiple parameters, expected one");
+        let attrs = MacroAttributes {
+            glob_pattern: input.parse()?,
+            ignore: Self::parse_ignore_attribute(input)?,
+        };
+        if input.is_empty() {
+            Ok(attrs)
+        } else {
+            Err(input.error("found unexpected extra parameters"))
         }
+    }
+}
 
-        Ok(MacroAttributes {
-            glob_pattern,
-        })
+/// utility functions to parse MacroAttributes
+impl MacroAttributes {
+    fn parse_ignore_attribute(input: ParseStream) -> Result<bool> {
+        if input.is_empty() {
+            Ok(false)
+        } else {
+            input.parse::<Token![,]>()?;
+            input.parse::<kw::ignore>()?;
+            Ok(true)
+        }
     }
 }
 
@@ -223,7 +251,10 @@ impl Parse for MacroAttributes {
 /// ```
 #[proc_macro_attribute]
 pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
-    let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
+    let MacroAttributes {
+        glob_pattern,
+        ignore,
+    } = parse_macro_input!(attrs as MacroAttributes);
 
     let pattern = match glob_pattern {
         Lit::Str(l) => l.value(),
@@ -238,8 +269,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_copy: proc_macro2::TokenStream = func.clone().into();
 
-    let func_ast: ItemFn = syn::parse(func)
-        .expect("failed to parse tokens as a function");
+    let func_ast: ItemFn = syn::parse(func).expect("failed to parse tokens as a function");
 
     let func_ident = func_ast.sig.ident;
 
@@ -261,9 +291,19 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
             // quote! requires proc_macro2 elements
             let test_ident = proc_macro2::Ident::new(&test_name, proc_macro2::Span::call_site());
 
-            let item = quote! {
+            let annotations = quote! {
                 #[test]
                 #[allow(non_snake_case)]
+            };
+            let optional_annotation = match ignore {
+                true => quote! {
+                    #[ignore]
+                },
+                false => quote! {},
+            };
+            let item = quote! {
+                #annotations
+                #optional_annotation
                 fn # test_ident () {
                     # func_ident ( #path_as_str .into() );
                 }
@@ -343,7 +383,10 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_attribute]
 pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
-    let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
+    let MacroAttributes {
+        glob_pattern,
+        ignore: _,
+    } = parse_macro_input!(attrs as MacroAttributes);
 
     let pattern = match glob_pattern {
         Lit::Str(l) => l.value(),
@@ -358,8 +401,7 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_copy: proc_macro2::TokenStream = func.clone().into();
 
-    let func_ast: ItemFn = syn::parse(func)
-        .expect("failed to parse tokens as a function");
+    let func_ast: ItemFn = syn::parse(func).expect("failed to parse tokens as a function");
 
     let func_ident = func_ast.sig.ident;
 
@@ -402,7 +444,6 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     // transforming proc_macro2::TokenStream into proc_macro::TokenStream
     result.1.into()
 }
-
 
 /// **Experimental** Helper function encapsulating and unwinding each phase, namely setup, test and teardown
 //fn run_utest<U, T, D, C>(setup: U, test: T, teardown: D) -> ()
@@ -501,7 +542,6 @@ fn concat_ts(
 ) -> proc_macro2::TokenStream {
     quote! { #accu #other }
 }
-
 
 /// Parser elements
 struct GlobExpand {
