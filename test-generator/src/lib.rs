@@ -193,6 +193,60 @@ impl MacroAttributes {
     }
 }
 
+#[cfg(test)]
+mod tests {
+
+
+    use super::MacroAttributes;
+    use syn::{parse_quote, Attribute, Lit};
+
+    #[test]
+    fn parse_test_resources_attribute() {
+        let attr: Attribute = parse_quote! {
+            #[test_resources("res/*/input.txt")]
+        };
+        let attrs: MacroAttributes = attr.parse_args().unwrap();
+        if let Lit::Str(s) = attrs.glob_pattern {
+            assert_eq!(s.value(), "res/*/input.txt");
+        } else {
+            panic!("expected string literal");
+        }
+        assert_eq!(attrs.ignore, false);
+    }
+
+    #[test]
+    fn parse_test_resources_attribute_with_ignore() {
+        let attr: syn::Attribute = parse_quote! {
+            #[test_resources("res/*/input.txt", ignore)]
+        };
+        let attrs: MacroAttributes = attr.parse_args().unwrap();
+        if let Lit::Str(s) = attrs.glob_pattern {
+            assert_eq!(s.value(), "res/*/input.txt");
+        } else {
+            panic!("expected string literal");
+        }
+        assert_eq!(attrs.ignore, true);
+    }
+
+    #[test]
+    #[should_panic(expected = "expected `ignore`")]
+    fn parse_test_resources_attribute_with_unknown_attribute() {
+        let attr: syn::Attribute = parse_quote! {
+            #[test_resources("res/*/input.txt", unknown)]
+        };
+        let _attrs: MacroAttributes = attr.parse_args().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "found unexpected extra parameters")]
+    fn parse_test_resources_attribute_with_too_many_attribute() {
+        let attr: syn::Attribute = parse_quote! {
+            #[test_resources("res/*/input.txt", ignore, fail)]
+        };
+        let _attrs: MacroAttributes = attr.parse_args().unwrap();
+    }
+}
+
 /// Macro generating test-functions, invoking the fn for each item matching the resource-pattern.
 ///
 /// The resource-pattern must not expand to empty list, otherwise an error is raised.
