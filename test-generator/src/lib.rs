@@ -231,8 +231,8 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
         Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
         Lit::ByteStr(_) => panic!("expected string parameter, got byte-string"),
         Lit::Char(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", l)),
+        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", l)),
         _ => panic!("expected string parameter"),
     };
 
@@ -241,7 +241,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     let func_ast: ItemFn = syn::parse(func)
         .expect("failed to parse tokens as a function");
 
-    let func_ident = func_ast.ident;
+    let func_ident = func_ast.sig.ident;
 
     let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
 
@@ -351,8 +351,8 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
         Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
         Lit::ByteStr(_) => panic!("expected string parameter, got byte-string"),
         Lit::Char(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", l)),
+        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", l)),
         _ => panic!("expected string parameter"),
     };
 
@@ -361,7 +361,7 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     let func_ast: ItemFn = syn::parse(func)
         .expect("failed to parse tokens as a function");
 
-    let func_ident = func_ast.ident;
+    let func_ident = func_ast.sig.ident;
 
     let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
 
@@ -572,7 +572,7 @@ fn expr_stringified(expr: &Expr, int_as_hex: bool) -> String {
                 attrs: _,
             } => match litval {
                 Lit::Int(lit) => {
-                    let val = lit.value();
+                    let val: u64 = lit.base10_parse().unwrap();
                     if int_as_hex {
                         // if u8-range, use two digits, otherwise 16
                         if val > 255 {
@@ -594,7 +594,7 @@ fn expr_stringified(expr: &Expr, int_as_hex: bool) -> String {
                     val
                 }
                 Lit::Float(lit) => {
-                    let val = lit.value();
+                    let val: f64 = lit.base10_parse().unwrap();
                     format!("{}", val)
                 }
                 _ => panic!(),
