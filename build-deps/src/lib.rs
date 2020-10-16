@@ -20,7 +20,7 @@
 //! Note: The cargo application ist storing the build-script-output in the build directory,
 //!       for example: `target/debug/build/*/output`.
 extern crate glob;
-use std::path::{Path};
+use std::path::Path;
 
 use self::glob::{glob, Paths};
 
