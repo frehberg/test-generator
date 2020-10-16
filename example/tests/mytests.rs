@@ -26,7 +26,9 @@ mod tests {
     // }
     // ```
     #[test_resources("res/*/input.txt")]
-    fn verify_resource(resource: &str) { assert!(std::path::Path::new(resource).exists()); }
+    fn verify_resource(resource: &str) {
+        assert!(std::path::Path::new(resource).exists());
+    }
 }
 
 #[cfg(test)]
@@ -40,12 +42,18 @@ mod testsuite {
     use test_generator_utest::utest;
 
     // Defining a context structure, storing the resources
-    struct Context<'t> { file: File, name: &'t str }
+    struct Context<'t> {
+        file: File,
+        name: &'t str,
+    }
 
     // Setup - Initializing the resources
     fn setup<'t>(filename: &str) -> Context {
         // unwrap may panic
-        Context { file: File::create(filename).unwrap(), name: filename }
+        Context {
+            file: File::create(filename).unwrap(),
+            name: filename,
+        }
     }
 
     // Teardown - Releasing the resources
@@ -81,13 +89,17 @@ mod testsuite {
         std::mem::drop(file);
     }
 
-    utest!(hello_world,
+    utest!(
+        hello_world,
         || setup("/tmp/hello_world.txt"),
         |ctx_ref| test_write_hello_world(ctx_ref),
-        |ctx|teardown(ctx));
+        |ctx| teardown(ctx)
+    );
 
-    utest!(hello_europe,
+    utest!(
+        hello_europe,
         || setup("/tmp/hello_europe.txt"),
         test_write_hello_europe,
-        teardown);
+        teardown
+    );
 }
