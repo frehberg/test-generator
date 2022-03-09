@@ -121,10 +121,11 @@ extern crate glob;
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use std::env;
 
 use self::glob::{glob, Paths};
 use quote::quote;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use syn::parse::{Parse, ParseStream, Result};
 use syn::{parse_macro_input, Expr, ExprLit, Ident, Lit, Token, ItemFn};
 
@@ -193,19 +194,19 @@ impl Parse for MacroAttributes {
 /// ├── build.rs
 /// ├── Cargo.toml
 /// ├── res
-/// │   ├── set1
-/// │   │   ├── expect.txt
-/// │   │   └── input.txt
-/// │   ├── set2
-/// │   │   ├── expect.txt
-/// │   │   └── input.txt
-/// │   └── set3
-/// │       ├── expect.txt
-/// │       └── input.txt
+/// │  ├── set1
+/// │  │  ├── expect.txt
+/// │  │  └── input.txt
+/// │  ├── set2
+/// │  │  ├── expect.txt
+/// │  │  └── input.txt
+/// │  └── set3
+/// │       ├── expect.txt
+/// │      └── input.txt
 /// ├── src
-/// │   └── main.rs
+/// │  └── main.rs
 /// ├── benches
-/// │   └── mybenches.rs
+/// │  └── mybenches.rs
 /// └── tests
 ///     └── mytests.rs
 /// ```
@@ -225,7 +226,7 @@ impl Parse for MacroAttributes {
 pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
 
-    let pattern = match glob_pattern {
+    let unqualified_pattern = match glob_pattern {
         Lit::Str(l) => l.value(),
         Lit::Bool(l) => panic!(format!("expected string parameter, got '{}'", &l.value)),
         Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
@@ -243,6 +244,11 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_ident = func_ast.ident;
 
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let cargo_manifest_path = Path::new(&manifest_dir);
+    let pattern = cargo_manifest_path.join(Path::new(&unqualified_pattern));
+    let pattern = pattern.to_str().unwrap();
+
     let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
 
     // for each path generate a test-function and fold them to single tokenstream
@@ -250,6 +256,9 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
         .map(|path| {
             let path_as_str = path
                 .expect("No such file or directory")
+                .strip_prefix(cargo_manifest_path)
+                .unwrap()
+                .to_path_buf()
                 .into_os_string()
                 .into_string()
                 .expect("bad encoding");
@@ -315,19 +324,19 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 /// ├── build.rs
 /// ├── Cargo.toml
 /// ├── res
-/// │   ├── set1
-/// │   │   ├── expect.txt
-/// │   │   └── input.txt
-/// │   ├── set2
-/// │   │   ├── expect.txt
-/// │   │   └── input.txt
-/// │   └── set3
-/// │       ├── expect.txt
-/// │       └── input.txt
+/// │  ├── set1
+/// │  │  ├── expect.txt
+/// │  │  └── input.txt
+/// │  ├── set2
+/// │  │  ├── expect.txt
+/// │  │  └── input.txt
+/// │  └── set3
+/// │      ├── expect.txt
+/// │      └── input.txt
 /// ├── src
-/// │   └── main.rs
+/// │  └── main.rs
 /// ├── benches
-/// │   └── mybenches.rs
+/// │  └── mybenches.rs
 /// └── tests
 ///     └── mytests.rs
 /// ```
@@ -345,7 +354,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     let MacroAttributes { glob_pattern } = parse_macro_input!(attrs as MacroAttributes);
 
-    let pattern = match glob_pattern {
+    let unqualified_pattern = match glob_pattern {
         Lit::Str(l) => l.value(),
         Lit::Bool(l) => panic!(format!("expected string parameter, got '{}'", &l.value)),
         Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
@@ -363,6 +372,11 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_ident = func_ast.ident;
 
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let cargo_manifest_path = Path::new(&manifest_dir);
+    let pattern = cargo_manifest_path.join(Path::new(&unqualified_pattern));
+    let pattern = pattern.to_str().unwrap();
+
     let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
 
     // for each path generate a test-function and fold them to single tokenstream
@@ -370,6 +384,9 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
         .map(|path| {
             let path_as_str = path
                 .expect("No such file or directory")
+                .strip_prefix(cargo_manifest_path)
+                .unwrap()
+                .to_path_buf()
                 .into_os_string()
                 .into_string()
                 .expect("bad encoding");
