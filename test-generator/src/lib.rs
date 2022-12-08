@@ -227,12 +227,12 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let pattern = match glob_pattern {
         Lit::Str(l) => l.value(),
-        Lit::Bool(l) => panic!(format!("expected string parameter, got '{}'", &l.value)),
-        Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Bool(l) => panic!("expected string parameter, got '{}'", &l.value),
+        Lit::Byte(l) => panic!("expected string parameter, got '{}'", &l.value()),
         Lit::ByteStr(_) => panic!("expected string parameter, got byte-string"),
-        Lit::Char(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Char(l) => panic!("expected string parameter, got '{}'", &l.value()),
+        Lit::Int(l) => panic!("expected string parameter, got '{}'", &l.value()),
+        Lit::Float(l) => panic!("expected string parameter, got '{}'", &l.value()),
         _ => panic!("expected string parameter"),
     };
 
@@ -275,8 +275,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     // panic, the pattern did not match any file or folder
     if result.0 == 0 {
-        let msg: String = format!("no resource matching the pattern {}", &pattern);
-        panic!(msg);
+        panic!("no resource matching the pattern {}", &pattern);
     }
     // transforming proc_macro2::TokenStream into proc_macro::TokenStream
     result.1.into()
@@ -347,12 +346,12 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let pattern = match glob_pattern {
         Lit::Str(l) => l.value(),
-        Lit::Bool(l) => panic!(format!("expected string parameter, got '{}'", &l.value)),
-        Lit::Byte(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Bool(l) => panic!("expected string parameter, got '{}'", &l.value),
+        Lit::Byte(l) => panic!("expected string parameter, got '{}'", &l.value()),
         Lit::ByteStr(_) => panic!("expected string parameter, got byte-string"),
-        Lit::Char(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Int(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
-        Lit::Float(l) => panic!(format!("expected string parameter, got '{}'", &l.value())),
+        Lit::Char(l) => panic!("expected string parameter, got '{}'", &l.value()),
+        Lit::Int(l) => panic!("expected string parameter, got '{}'", &l.value()),
+        Lit::Float(l) => panic!("expected string parameter, got '{}'", &l.value()),
         _ => panic!("expected string parameter"),
     };
 
@@ -395,8 +394,7 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     // panic, the pattern did not match any file or folder
     if result.0 == 0 {
-        let msg: String = format!("no resource matching the pattern {}", &pattern);
-        panic!(msg);
+        panic!("no resource matching the pattern {}", &pattern);
     }
 
     // transforming proc_macro2::TokenStream into proc_macro::TokenStream
