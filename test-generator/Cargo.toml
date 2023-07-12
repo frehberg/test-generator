@@ -19,5 +19,4 @@ glob = "^0.3"
 quote = "0.6"
 syn = { version="^0.15", features=["full"] }
 proc-macro2 = "^0.4"
-serial_test = "2.0.0"
 
