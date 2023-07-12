@@ -260,7 +260,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
             let item = quote! {
                 #[test]
-                #[serial]
+                #[crate::serial]
                 #[allow(non_snake_case)]
                 fn # test_ident () {
                     # func_ident ( #path_as_str .into() );
