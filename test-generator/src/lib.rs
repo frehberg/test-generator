@@ -238,6 +238,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_ast: ItemFn = syn::parse(func).expect("failed to parse tokens as a function");
 
+    let ret_sig = (*func_ast.decl).output;
     let func_ident = func_ast.ident;
 
     let paths: Paths = glob(&pattern).expect(&format!("No such file or directory {}", &pattern));
@@ -259,11 +260,11 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
             let test_ident = proc_macro2::Ident::new(&test_name, proc_macro2::Span::call_site());
 
             let item = quote! {
-                #[test]
-                #[crate::serial]
-                #[allow(non_snake_case)]
-                fn # test_ident () -> Result<()> {
-                    # func_ident ( #path_as_str .into() )
+                # [test]
+                # [crate::serial]
+                # [allow(non_snake_case)]
+                fn #test_ident () #ret_sig {
+                    #func_ident ( #path_as_str .into() )
                 }
             };
 
