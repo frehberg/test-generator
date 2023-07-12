@@ -126,7 +126,7 @@ use self::glob::{glob, Paths};
 use quote::quote;
 use std::path::PathBuf;
 use syn::parse::{Parse, ParseStream, Result};
-use syn::{parse_macro_input, Expr, ExprLit, Ident, Lit, Token, ItemFn};
+use syn::{parse_macro_input, Expr, ExprLit, Ident, ItemFn, Lit, Token};
 
 // Form canonical name without any punctuation/delimiter or special character
 fn canonical_fn_name(s: &str) -> String {
@@ -155,13 +155,11 @@ struct MacroAttributes {
 impl Parse for MacroAttributes {
     fn parse(input: ParseStream) -> Result<Self> {
         let glob_pattern: Lit = input.parse()?;
-        if ! input.is_empty() {
+        if !input.is_empty() {
             panic!("found multiple parameters, expected one");
         }
 
-        Ok(MacroAttributes {
-            glob_pattern,
-        })
+        Ok(MacroAttributes { glob_pattern })
     }
 }
 
@@ -238,8 +236,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_copy: proc_macro2::TokenStream = func.clone().into();
 
-    let func_ast: ItemFn = syn::parse(func)
-        .expect("failed to parse tokens as a function");
+    let func_ast: ItemFn = syn::parse(func).expect("failed to parse tokens as a function");
 
     let func_ident = func_ast.ident;
 
@@ -263,6 +260,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
             let item = quote! {
                 #[test]
+                #[serial]
                 #[allow(non_snake_case)]
                 fn # test_ident () {
                     # func_ident ( #path_as_str .into() );
@@ -272,6 +270,15 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
             item
         })
         .fold((0, func_copy), concat_ts_cnt);
+
+    let (accu_cnt, accu_ts) = result;
+    let result = (
+        accu_cnt,
+        quote! {
+            use serial_test::serial;
+            #accu_ts
+        },
+    );
 
     // panic, the pattern did not match any file or folder
     if result.0 == 0 {
@@ -357,8 +364,7 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
 
     let func_copy: proc_macro2::TokenStream = func.clone().into();
 
-    let func_ast: ItemFn = syn::parse(func)
-        .expect("failed to parse tokens as a function");
+    let func_ast: ItemFn = syn::parse(func).expect("failed to parse tokens as a function");
 
     let func_ident = func_ast.ident;
 
@@ -400,7 +406,6 @@ pub fn bench_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     // transforming proc_macro2::TokenStream into proc_macro::TokenStream
     result.1.into()
 }
-
 
 /// **Experimental** Helper function encapsulating and unwinding each phase, namely setup, test and teardown
 //fn run_utest<U, T, D, C>(setup: U, test: T, teardown: D) -> ()
@@ -499,7 +504,6 @@ fn concat_ts(
 ) -> proc_macro2::TokenStream {
     quote! { #accu #other }
 }
-
 
 /// Parser elements
 struct GlobExpand {
@@ -816,7 +820,7 @@ pub fn test_expand_paths(item: TokenStream) -> TokenStream {
             let path_as_str = path.into_os_string().into_string().expect("bad encoding");
 
             let item = quote! {
-                # [test]
+                #[test]
                 fn #gen_fn_ident () {
                     #fn_ident ( #path_as_str );
                 }
