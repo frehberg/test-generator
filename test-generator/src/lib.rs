@@ -271,14 +271,6 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
         })
         .fold((0, func_copy), concat_ts_cnt);
 
-    let (accu_cnt, accu_ts) = result;
-    let result = (
-        accu_cnt,
-        quote! {
-            #accu_ts
-        },
-    );
-
     // panic, the pattern did not match any file or folder
     if result.0 == 0 {
         panic!("no resource matching the pattern {}", &pattern);
