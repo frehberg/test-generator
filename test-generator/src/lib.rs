@@ -275,7 +275,6 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
     let result = (
         accu_cnt,
         quote! {
-            use serial_test::serial;
             #accu_ts
         },
     );
