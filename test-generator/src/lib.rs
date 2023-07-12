@@ -263,7 +263,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
                 #[crate::serial]
                 #[allow(non_snake_case)]
                 fn # test_ident () -> Result() {
-                    # func_ident ( #path_as_str .into() )
+                    # func_ident ( #path_as_str .into() )?
                 }
             };
 
