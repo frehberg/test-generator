@@ -260,7 +260,7 @@ pub fn test_resources(attrs: TokenStream, func: TokenStream) -> TokenStream {
             let test_ident = proc_macro2::Ident::new(&test_name, proc_macro2::Span::call_site());
 
             let item = quote! {
-                # [test]
+                # [meta::test]
                 # [crate::serial]
                 # [allow(non_snake_case)]
                 fn #test_ident () #ret_sig {
